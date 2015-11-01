@@ -767,7 +767,7 @@ mlvpn_rtun_bind(mlvpn_tunnel_t *t)
 
     /* Try open socket with each address getaddrinfo returned,
        until getting a valid listening socket. */
-    log_info(NULL, "%s bind to %s", t->name, t->bindaddr ? t->bindaddr : "any");
+    log_info(NULL, "%s bind to %s", t->name, *t->bindaddr ? t->bindaddr : "any");
     n = bind(fd, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
     if (n < 0)
@@ -840,7 +840,7 @@ mlvpn_rtun_start(mlvpn_tunnel_t *t)
         t->fd = -1;
         return -1;
     }
-    if (t->bindaddr || t->server_mode)
+    if (*t->bindaddr || t->server_mode)
     {
         if (mlvpn_rtun_bind(t) < 0)
         {

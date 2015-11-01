@@ -397,23 +397,6 @@ mlvpn_config(int config_file_fd, int first_time)
             }
         } else if (lastSection == NULL)
             lastSection = work->section;
-
-#ifdef HAVE_LIBPCAP
-        if (strncmp(work->section, "filters", 7) == 0) {
-            if (pcap_compile(pcap_dead_p, &filter, work->conf->val,
-                    1, PCAP_NETMASK_UNKNOWN) != 0) {
-                log_warn("config", "invalid filter %s = %s: %s",
-                    work->conf->var, work->conf->val, pcap_geterr(pcap_dead_p));
-            } else {
-                LIST_FOREACH(tmptun, &rtuns, entries) {
-                    if (mystr_eq(work->conf->var, tmptun->name)) {
-                        memcpy(&tmptun->filters[tmptun->filters_count++],
-                            &filter, sizeof(filter));
-                    }
-                }
-            }
-        }
-#endif
         work = work->next;
     }
 
@@ -443,6 +426,34 @@ mlvpn_config(int config_file_fd, int first_time)
             }
         }
     }
+
+
+#ifdef HAVE_LIBPCAP
+    work = config;
+    while (work)
+    {
+        if (strncmp(work->section, "filters", 7) == 0) {
+            if (pcap_compile(pcap_dead_p, &filter, work->conf->val,
+                    1, PCAP_NETMASK_UNKNOWN) != 0) {
+                log_warn("config", "invalid filter %s = %s: %s",
+                    work->conf->var, work->conf->val, pcap_geterr(pcap_dead_p));
+            } else {
+                LIST_FOREACH(tmptun, &rtuns, entries) {
+                    printf("compare %s to %s\n", tmptun->name, work->conf->var);
+                    if (strcmp(work->conf->var, tmptun->name) == 0) {
+                        memcpy(&tmptun->filters[tmptun->filters_count++],
+                            &filter, sizeof(filter));
+                        log_debug("config", "%s added exclusive filter: %s",
+                            tmptun->name, work->conf->val);
+                        break;
+                    }
+                }
+            }
+        }
+        work = work->next;
+    }
+#endif
+
     //_conf_printConfig(config);
     _conf_freeConfig(config);
 #ifdef HAVE_LIBPCAP
