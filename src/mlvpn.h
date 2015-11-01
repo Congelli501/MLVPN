@@ -37,6 +37,10 @@
  #include <resolv.h>
 #endif
 
+#ifdef HAVE_LIBPCAP
+ #include <pcap/pcap.h>
+#endif
+
 #include "pkt.h"
 #include "buffer.h"
 #include "reorder.h"
@@ -101,10 +105,10 @@ typedef struct mlvpn_tunnel_s
 {
     LIST_ENTRY(mlvpn_tunnel_s) entries;
     char *name;           /* tunnel name */
-    char *bindaddr;       /* packets source */
-    char *bindport;       /* packets port source (or NULL) */
-    char *destaddr;       /* remote server ip (can be hostname) */
-    char *destport;       /* remote server port */
+    char bindaddr[MLVPN_MAXHNAMSTR]; /* packets source */
+    char bindport[MLVPN_MAXPORTSTR]; /* packets port source (or NULL) */
+    char destaddr[MLVPN_MAXHNAMSTR]; /* remote server ip (can be hostname) */
+    char destport[MLVPN_MAXPORTSTR]; /* remote server port */
     int fd;               /* socket file descriptor */
     int server_mode;      /* server or client */
     int disconnects;      /* is it stable ? */
@@ -140,6 +144,10 @@ typedef struct mlvpn_tunnel_s
     ev_io io_read;
     ev_io io_write;
     ev_timer io_timeout;
+#ifdef HAVE_LIBPCAP
+    uint8_t filters_count;
+    struct bpf_program filters[255];
+#endif
 } mlvpn_tunnel_t;
 
 struct mlvpn_status_s

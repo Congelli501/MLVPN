@@ -611,8 +611,9 @@ mlvpn_rtun_new(const char *name,
     }
 
     new = (mlvpn_tunnel_t *)calloc(1, sizeof(mlvpn_tunnel_t));
+    if (! new)
+        fatal(NULL, "calloc failed");
     /* other values are enforced by calloc to 0/NULL */
-
     new->name = strdup(name);
     new->fd = -1;
     new->server_mode = server_mode;
@@ -635,29 +636,24 @@ mlvpn_rtun_new(const char *name,
     new->bandwidth = bandwidth;
     new->fallback_only = fallback_only;
     new->loss_tolerence = loss_tolerence;
+#ifdef HAVE_LIBPCAP
+    new->filters_count = 0;
+#endif
 
-    if (bindaddr)
-    {
-        new->bindaddr = calloc(1, MLVPN_MAXHNAMSTR+1);
-        strlcpy(new->bindaddr, bindaddr, MLVPN_MAXHNAMSTR);
+    if (bindaddr) {
+        strlcpy(new->bindaddr, bindaddr, sizeof(new->bindaddr));
     }
 
-    if (bindport)
-    {
-        new->bindport = calloc(1, MLVPN_MAXPORTSTR+1);
-        strlcpy(new->bindport, bindport, MLVPN_MAXPORTSTR);
+    if (bindport) {
+        strlcpy(new->bindport, bindport, sizeof(new->bindport));
     }
 
-    if (destaddr)
-    {
-        new->destaddr = calloc(1, MLVPN_MAXHNAMSTR+1);
-        strlcpy(new->destaddr, destaddr, MLVPN_MAXHNAMSTR);
+    if (destaddr) {
+        strlcpy(new->destaddr, destaddr, sizeof(new->destaddr));
     }
 
-    if (destport)
-    {
-        new->destport = calloc(1, MLVPN_MAXPORTSTR+1);
-        strlcpy(new->destport, destport, MLVPN_MAXPORTSTR);
+    if (destport) {
+        strlcpy(new->destport, destport, sizeof(new->destport));
     }
 
     new->sbuf = mlvpn_pktbuffer_init(PKTBUFSIZE);
@@ -697,14 +693,6 @@ mlvpn_rtun_drop(mlvpn_tunnel_t *t)
             LIST_REMOVE(tmp, entries);
             if (tmp->name)
                 free(tmp->name);
-            if (tmp->bindaddr)
-                free(tmp->bindaddr);
-            if (tmp->bindport)
-                free(tmp->bindport);
-            if (tmp->destaddr)
-                free(tmp->destaddr);
-            if (tmp->destport)
-                free(tmp->destport);
             if (tmp->addrinfo)
                 freeaddrinfo(tmp->addrinfo);
             mlvpn_pktbuffer_free(tmp->sbuf);
