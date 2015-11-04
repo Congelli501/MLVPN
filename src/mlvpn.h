@@ -60,6 +60,11 @@
 #define MLVPN_IFNAMSIZ IFNAMSIZ
 
 #define NEXT_KEEPALIVE(now, t) (now + 2)
+/* Protocol version of mlvpn
+ * version 0: mlvpn 2.0 to 2.1 
+ * version 1: mlvpn 2.2+ (add reorder field in mlvpn_proto_t)
+ */
+#define MLVPN_PROTOCOL_VERSION 1
 
 struct mlvpn_options
 {
@@ -174,6 +179,10 @@ mlvpn_tunnel_t *mlvpn_rtun_new(const char *name,
     uint32_t loss_tolerence);
 void mlvpn_rtun_drop(mlvpn_tunnel_t *t);
 void mlvpn_rtun_status_down(mlvpn_tunnel_t *t);
+#ifdef HAVE_PCAP
+circular_buffer_t *mlvpn_filters_choose(mlvpn_tunnel_t *t,
+    uint32_t pktlen, const u_char *pktdata);
+#endif
 
 #include "privsep.h"
 #include "log.h"

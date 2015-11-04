@@ -18,25 +18,9 @@ mlvpn_tuntap_read(struct tuntap_s *tuntap)
     mlvpn_tunnel_t *rtun;
     mlvpn_pkt_t *pkt;
     int ret;
+    char data[DEFAULT_MTU];
 
-    /* choosing a tunnel to send to (direct buffer copy) */
-    rtun = mlvpn_rtun_choose();
-
-    /* Not connected to anyone. read and discard packet. */
-    if (! rtun)
-    {
-        char blackhole[DEFAULT_MTU];
-        return read(tuntap->fd, blackhole, sizeof(blackhole));
-    }
-
-    /* Buffer checking / reset in case of overflow */
-    sbuf = rtun->sbuf;
-    if (mlvpn_cb_is_full(sbuf))
-        log_warnx("tuntap", "%s buffer: overflow", rtun->name);
-
-    /* Ask for a free buffer */
-    pkt = mlvpn_pktbuffer_write(sbuf);
-    ret = read(tuntap->fd, pkt->data, DEFAULT_MTU);
+    ret = read(tuntap->fd, data, DEFAULT_MTU);
     if (ret < 0)
     {
         /* read error on tuntap is not recoverable. We must die. */
@@ -45,6 +29,28 @@ mlvpn_tuntap_read(struct tuntap_s *tuntap)
         /* End of file */
         fatalx("tuntap device closed");
     }
+
+    /* choosing a tunnel to send to (direct buffer copy) */
+    rtun = mlvpn_rtun_choose();
+    /* Not connected to anyone. read and discard packet. */
+    if (! rtun) {
+        return ret;
+    }
+
+#ifdef HAVE_PCAP
+    sbuf = mlvpn_filters_choose(rtun, ret, (const char *) &data);
+#else
+    sbuf = rtun->sbuf;
+#endif
+
+    /* Buffer checking / reset in case of overflow */
+    if (mlvpn_cb_is_full(sbuf))
+        log_warnx("tuntap", "%s buffer: overflow", rtun->name);
+
+    /* Ask for a free buffer */
+    pkt = mlvpn_pktbuffer_write(sbuf);
+    /* TODO: INEFFICIENT COPY */
+    memcpy(pkt->data, data, ret);
     pkt->len = ret;
     if (pkt->len > tuntap->maxmtu)
     {

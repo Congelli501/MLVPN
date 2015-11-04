@@ -35,7 +35,11 @@ mlvpn_tuntap_read(struct tuntap_s *tuntap)
     }
 
     /* Buffer checking / reset in case of overflow */
+#ifdef HAVE_PCAP
+    sbuf = mlvpn_filters_choose(rtun);
+#else
     sbuf = rtun->sbuf;
+#endif
     if (mlvpn_cb_is_full(sbuf))
         log_warnx("tuntap",
             "%s buffer: overflow", rtun->name);

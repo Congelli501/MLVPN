@@ -430,23 +430,29 @@ mlvpn_config(int config_file_fd, int first_time)
 
 #ifdef HAVE_LIBPCAP
     work = config;
+    int found_in_config = 0;
     while (work)
     {
         if (strncmp(work->section, "filters", 7) == 0) {
             if (pcap_compile(pcap_dead_p, &filter, work->conf->val,
                     1, PCAP_NETMASK_UNKNOWN) != 0) {
-                log_warn("config", "invalid filter %s = %s: %s",
+                log_warnx("config", "invalid filter %s = %s: %s",
                     work->conf->var, work->conf->val, pcap_geterr(pcap_dead_p));
             } else {
+                found_in_config = 0;
                 LIST_FOREACH(tmptun, &rtuns, entries) {
-                    printf("compare %s to %s\n", tmptun->name, work->conf->var);
                     if (strcmp(work->conf->var, tmptun->name) == 0) {
                         memcpy(&tmptun->filters[tmptun->filters_count++],
                             &filter, sizeof(filter));
                         log_debug("config", "%s added exclusive filter: %s",
                             tmptun->name, work->conf->val);
+                        found_in_config = 1;
                         break;
                     }
+                }
+                if (!found_in_config) {
+                    log_warnx("config", "(filters) %s interface not found",
+                        work->conf->var);
                 }
             }
         }

@@ -68,6 +68,7 @@ mlvpn_LDADD=-lm $(libsodium_LIBS) $(libev_LIBS)
 mlvpn_CFLAGS=$(CFLAGS) $(libsodium_CFLAGS) $(libev_CFLAGS)
 
 if HAVE_LIBPCAP
+mlvpn_SOURCES += filters.c
 mlvpn_LDADD += -lpcap
 mlvpn_CFLAGS += $(libpcap_CFLAGS)
 endif
