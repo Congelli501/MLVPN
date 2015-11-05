@@ -37,7 +37,7 @@
  #include <resolv.h>
 #endif
 
-#ifdef HAVE_LIBPCAP
+#ifdef ENABLE_FILTERS
  #include <pcap/pcap.h>
 #endif
 
@@ -66,7 +66,7 @@
  */
 #define MLVPN_PROTOCOL_VERSION 1
 
-struct mlvpn_options
+struct mlvpn_options_s
 {
     /* use ps_status or not ? */
     int change_process_title;
@@ -95,6 +95,15 @@ struct mlvpn_options
     int root_allowed;
     uint32_t reorder_buffer_size;
     uint32_t fallback_available;
+};
+
+struct mlvpn_status_s
+{
+    int fallback_mode;
+    int connected;
+    int initialized;
+    time_t start_time;
+    time_t last_reload;
 };
 
 enum chap_status {
@@ -149,20 +158,15 @@ typedef struct mlvpn_tunnel_s
     ev_io io_read;
     ev_io io_write;
     ev_timer io_timeout;
-#ifdef HAVE_LIBPCAP
-    uint8_t filters_count;
-    struct bpf_program filters[255];
-#endif
 } mlvpn_tunnel_t;
 
-struct mlvpn_status_s
-{
-    int fallback_mode;
-    int connected;
-    int initialized;
-    time_t start_time;
-    time_t last_reload;
+#ifdef ENABLE_FILTERS
+struct mlvpn_filters_s {
+    uint8_t count;
+    struct bpf_program filter[255];
+    mlvpn_tunnel_t *tun[255];
 };
+#endif
 
 int mlvpn_config(int config_file_fd, int first_time);
 int mlvpn_sock_set_nonblocking(int fd);
@@ -179,9 +183,9 @@ mlvpn_tunnel_t *mlvpn_rtun_new(const char *name,
     uint32_t loss_tolerence);
 void mlvpn_rtun_drop(mlvpn_tunnel_t *t);
 void mlvpn_rtun_status_down(mlvpn_tunnel_t *t);
-#ifdef HAVE_PCAP
-circular_buffer_t *mlvpn_filters_choose(mlvpn_tunnel_t *t,
-    uint32_t pktlen, const u_char *pktdata);
+#ifdef ENABLE_FILTERS
+int mlvpn_filters_add(const struct bpf_program *filter, mlvpn_tunnel_t *tun);
+mlvpn_tunnel_t *mlvpn_filters_choose(uint32_t pktlen, const u_char *pktdata);
 #endif
 
 #include "privsep.h"

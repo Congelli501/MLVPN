@@ -84,8 +84,7 @@ struct mlvpn_status_s mlvpn_status = {
     .connected = 0,
     .initialized = 0
 };
-
-struct mlvpn_options mlvpn_options = {
+struct mlvpn_options_s mlvpn_options = {
     .change_process_title = 1,
     .process_name = "mlvpn",
     .control_unix_path = "",
@@ -106,6 +105,9 @@ struct mlvpn_options mlvpn_options = {
     .cleartext_data = 1,
     .root_allowed = 0,
     .reorder_buffer_size = 0
+};
+struct mlvpn_filters_s mlvpn_filters = {
+    .count = 0
 };
 
 struct mlvpn_reorder_buffer *reorder_buffer;
@@ -147,7 +149,6 @@ static int
 mlvpn_protocol_read(mlvpn_tunnel_t *tun,
                     mlvpn_pkt_t *rawpkt,
                     mlvpn_pkt_t *decap_pkt);
-
 
 
 static void
@@ -567,7 +568,7 @@ mlvpn_rtun_send(mlvpn_tunnel_t *tun, circular_buffer_t *pktbuf)
             log_warnx("net", "%s write error %d/%u",
                 tun->name, (int)ret, (unsigned int)wlen);
         } else {
-            log_debug("net", "< %s sent %d bytes (size=%d, type=%d, seq=%"PRIu64", reorder=%d)",
+            log_debug("net", "> %s sent %d bytes (size=%d, type=%d, seq=%"PRIu64", reorder=%d)",
                 tun->name, (int)ret, pkt->len, pkt->type, pkt->seq, pkt->reorder);
         }
     }
@@ -646,36 +647,20 @@ mlvpn_rtun_new(const char *name,
     new->bandwidth = bandwidth;
     new->fallback_only = fallback_only;
     new->loss_tolerence = loss_tolerence;
-#ifdef HAVE_LIBPCAP
-    new->filters_count = 0;
-#endif
-
-    if (bindaddr) {
+    if (bindaddr)
         strlcpy(new->bindaddr, bindaddr, sizeof(new->bindaddr));
-    }
-
-    if (bindport) {
+    if (bindport)
         strlcpy(new->bindport, bindport, sizeof(new->bindport));
-    }
-
-    if (destaddr) {
+    if (destaddr)
         strlcpy(new->destaddr, destaddr, sizeof(new->destaddr));
-    }
-
-    if (destport) {
+    if (destport)
         strlcpy(new->destport, destport, sizeof(new->destport));
-    }
-
     new->sbuf = mlvpn_pktbuffer_init(PKTBUFSIZE);
     new->hpsbuf = mlvpn_pktbuffer_init(PKTBUFSIZE);
-
     mlvpn_rtun_tick(new);
-
     new->timeout = timeout;
     new->next_keepalive = 0;
-
     LIST_INSERT_HEAD(&rtuns, new, entries);
-
     new->io_read.data = new;
     new->io_write.data = new;
     new->io_timeout.data = new;

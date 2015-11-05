@@ -135,19 +135,10 @@ PKG_CHECK_MODULES([libev], [libev], [], [
     ], [AC_MSG_ERROR("libev not found")])
 ])
 
-dnl checks for libpcap
-PKG_CHECK_MODULES([libpcap], [libpcap], [], [
-    AC_CHECK_HEADERS([pcap.h], [], [AC_MSG_ERROR("pcap.h not found")])
-    AC_CHECK_LIB([pcap], [pcap_open_dead], [
-        libpcap_LIBS="-lpcap"
-        AC_DEFINE([HAVE_LIBPCAP], [1], [pcap_open_dead in -lpcap])
-        AM_CONDITIONAL([HAVE_LIBPCAP], [true])
-    ], [AC_MSG_ERROR("libpcap not found")])
-])
-
 
 ### Command lines options ###
 mlvpn_ARG_ENABLE([control], [remote control system (cli and http)], [yes])
+mlvpn_ARG_ENABLE([filters], [libpcap support for filters], [yes])
 mlvpn_ARG_WITH([install-examples], [install example files], [yes])
 AM_CONDITIONAL([INSTALL_EXAMPLES], [test x"$with_install_examples" = x"yes" ])
 
@@ -168,6 +159,22 @@ mlvpn_ARG_WITH([systemdtmpfilesdir], [Directory for systemd tmpfiles],
     AC_SUBST([systemdtmpfilesdir], [$with_systemdtmpfilesdir])
     AM_CONDITIONAL(HAVE_SYSTEMDTMPFILESDIR,
         [test -n "$with_systemdtmpfilesdir" -a "x$with_systemdtmpfilesdir" != xno ])
+
+dnl checks for libpcap
+# Default values
+AC_DEFINE([HAVE_LIBPCAP], [0], [])
+AM_CONDITIONAL([HAVE_LIBPCAP], [false])
+if test x"$ENABLE_FILTERS" = x"yes"; then
+    dnl checks for libpcap
+    PKG_CHECK_MODULES([libpcap], [libpcap], [], [
+        AC_CHECK_HEADERS([pcap.h], [], [AC_MSG_ERROR("pcap.h not found")])
+        AC_CHECK_LIB([pcap], [pcap_open_dead], [
+            libpcap_LIBS="-lpcap"
+            AC_DEFINE([HAVE_LIBPCAP], [1], [pcap_open_dead in -lpcap])
+            AM_CONDITIONAL([HAVE_LIBPCAP], [true])
+        ], [AC_MSG_ERROR("libpcap not found")])
+    ])
+fi
 
 AC_CHECK_PROGS([RONN], [ronn], [])
 AM_CONDITIONAL(HAVE_RONN, [test x"$RONN" != "x"])

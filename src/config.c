@@ -31,8 +31,9 @@
 #include "tuntap_generic.h"
 
 extern char *status_command;
+extern struct mlvpn_options_s mlvpn_options;
+extern struct mlvpn_filters_s mlvpn_filters;
 extern struct tuntap_s tuntap;
-extern struct mlvpn_options mlvpn_options;
 extern struct mlvpn_reorder_buffer *reorder_buffer;
 
 /* Config file reading / re-read.
@@ -61,13 +62,10 @@ mlvpn_config(int config_file_fd, int first_time)
     mlvpn_options.fallback_available = 0;
 
     /* reset all bpf filters on every interface */
-#ifdef HAVE_LIBPCAP
+#ifdef ENABLE_FILTERS
     struct bpf_program filter;
-    pcap_t *pcap_dead_p = pcap_open_dead(DLT_EN10MB, 1500);
-    LIST_FOREACH(tmptun, &rtuns, entries) {
-        tmptun->filters_count = 0;
-        memset(tmptun->filters, 0, sizeof(tmptun->filters));
-    }
+    pcap_t *pcap_dead_p = pcap_open_dead(DLT_RAW, DEFAULT_MTU);
+    memset(&mlvpn_filters, 0, sizeof(mlvpn_filters));
 #endif
 
     work = config = _conf_parseConfig(config_file_fd);
@@ -427,13 +425,13 @@ mlvpn_config(int config_file_fd, int first_time)
         }
     }
 
-
-#ifdef HAVE_LIBPCAP
+#ifdef ENABLE_FILTERS
     work = config;
     int found_in_config = 0;
     while (work)
     {
         if (strncmp(work->section, "filters", 7) == 0) {
+            memset(&filter, 0, sizeof(filter));
             if (pcap_compile(pcap_dead_p, &filter, work->conf->val,
                     1, PCAP_NETMASK_UNKNOWN) != 0) {
                 log_warnx("config", "invalid filter %s = %s: %s",
@@ -442,12 +440,15 @@ mlvpn_config(int config_file_fd, int first_time)
                 found_in_config = 0;
                 LIST_FOREACH(tmptun, &rtuns, entries) {
                     if (strcmp(work->conf->var, tmptun->name) == 0) {
-                        memcpy(&tmptun->filters[tmptun->filters_count++],
-                            &filter, sizeof(filter));
-                        log_debug("config", "%s added exclusive filter: %s",
-                            tmptun->name, work->conf->val);
-                        found_in_config = 1;
-                        break;
+                        if (mlvpn_filters_add(&filter, tmptun) != 0) {
+                            log_warnx("config", "%s filter %s error: too many filters",
+                                tmptun->name, work->conf->val);
+                        } else {
+                            log_debug("config", "%s added filter: %s",
+                                tmptun->name, work->conf->val);
+                            found_in_config = 1;
+                            break;
+                        }
                     }
                 }
                 if (!found_in_config) {
@@ -462,7 +463,7 @@ mlvpn_config(int config_file_fd, int first_time)
 
     //_conf_printConfig(config);
     _conf_freeConfig(config);
-#ifdef HAVE_LIBPCAP
+#ifdef ENABLE_FILTERS
     pcap_close(pcap_dead_p);
 #endif
 
