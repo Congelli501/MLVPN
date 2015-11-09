@@ -15,7 +15,7 @@ before_install:
   - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz -O libsodium.tar.gz && tar xzf libsodium.tar.gz && cd libsodium-* && ./autogen.sh && ./configure --prefix=$HOME/libsodium && make check && make install 
 script:
   - export PATH=$PATH:$HOME/libsodium
-  - ./autogen.sh && ./configure && make V=1 && sudo make install
+  - ./autogen.sh && ./configure --prefix=$HOME/build_mlvpn && make V=1 && make install
 cache:
   directories:
   - $HOME/libsodium
