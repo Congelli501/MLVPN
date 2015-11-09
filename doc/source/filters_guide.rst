@@ -3,8 +3,8 @@ Filtering
 The filtering system in mlvpn can be used when you use mlvpn
 in an aggregated scenario.
 
-Some protocols will suffer a lot of out-of-order packets or reorder loss,
-like all VoIP systems.
+Some protocols will suffer a lot from packets received out-of-order, or from packet loss,
+like VoIP systems.
 
 In order to avoid that problem, mlvpn includes a system called "filters".
 
@@ -27,7 +27,7 @@ except for SIP UDP port 5060.
 mlvpn.conf
 ----------
 
-.. code-block::
+.. code-block:: ini
 
     [general]
     # This configuration is not complete, please refer to the example
